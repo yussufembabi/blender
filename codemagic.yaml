@@ -37,6 +37,11 @@ workflows:
           git -c submodule.lib/ios_arm64.update=checkout \
               -c submodule.lib/macos_arm64.update=checkout \
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
+      - name: Locate cross-tools cmake source
+        script: |
+          set -euxo pipefail
+          cd "$CM_BUILD_DIR"
+          grep -rn "blender_cross_tools_compile" --include="*.cmake" --include="CMakeLists.txt" . || echo "no matches"
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
@@ -46,18 +51,6 @@ workflows:
             -B "$CM_BUILD_DIR/$BUILD_DIR" \
             -G Xcode \
             -DAPPLE_TARGET_DEVICE=ios
-      - name: Patch cross-tools script PATH
-        script: |
-          set -euxo pipefail
-          SCRIPT_FILE=$(find "$CM_BUILD_DIR/$BUILD_DIR" -name "Script-*.sh" -path "*blender_cross_tools_compile*")
-          echo "Found script: $SCRIPT_FILE"
-          echo "--- Before patch ---"
-          cat "$SCRIPT_FILE"
-          sed -i '' '1a\
-          export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:$PATH"
-          ' "$SCRIPT_FILE"
-          echo "--- After patch ---"
-          cat "$SCRIPT_FILE"
       - name: Build Blender
         script: |
           set -euxo pipefail
