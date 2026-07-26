@@ -24,6 +24,18 @@ workflows:
           cd "$CM_BUILD_DIR"
           git lfs install
           git lfs pull --exclude="tests/**"
+      - name: Fetch precompiled libs
+        script: |
+          set -euxo pipefail
+          cd "$CM_BUILD_DIR"
+          echo "--- Checking .gitmodules for iOS lib entries ---"
+          cat .gitmodules 2>/dev/null | grep -A2 -i ios || echo "no ios entry found in .gitmodules"
+          echo "--- Attempting submodule init for ios-simulator_arm64 ---"
+          git submodule update --init --recursive -- lib/ios-simulator_arm64 || echo "submodule path lib/ios-simulator_arm64 not found"
+          echo "--- Attempting submodule init for ios_arm64 (device libs, fallback) ---"
+          git submodule update --init --recursive -- lib/ios_arm64 || echo "submodule path lib/ios_arm64 not found"
+          echo "--- Contents of lib/ now ---"
+          ls -la lib/ 2>/dev/null || echo "no lib dir exists"
       - name: Configure Blender for iOS simulator
         script: |
           set -euxo pipefail
