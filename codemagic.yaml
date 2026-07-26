@@ -1,12 +1,12 @@
 workflows:
-  blender_ios_simulator:
-    name: Blender iOS simulator first build
+  blender_ios_device:
+    name: Blender iOS device first build
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
       xcode: latest
       vars:
-        BUILD_DIR: build-ios-sim
+        BUILD_DIR: build-ios-device
         GIT_LFS_SKIP_SMUDGE: "1"
     scripts:
       - name: Show environment
@@ -17,26 +17,20 @@ workflows:
           git rev-parse --short HEAD
           xcodebuild -version
           cmake --version
-          git lfs version || true
       - name: Fetch real LFS files (skip broken test assets)
         script: |
           set -euxo pipefail
           cd "$CM_BUILD_DIR"
           git lfs install
           git lfs pull --exclude="tests/**"
-      - name: Fetch precompiled libs
+      - name: Force-fetch iOS device precompiled libs
         script: |
           set -euxo pipefail
           cd "$CM_BUILD_DIR"
-          echo "--- Checking .gitmodules for iOS lib entries ---"
-          cat .gitmodules 2>/dev/null | grep -A2 -i ios || echo "no ios entry found in .gitmodules"
-          echo "--- Attempting submodule init for ios-simulator_arm64 ---"
-          git submodule update --init --recursive -- lib/ios-simulator_arm64 || echo "submodule path lib/ios-simulator_arm64 not found"
-          echo "--- Attempting submodule init for ios_arm64 (device libs, fallback) ---"
-          git submodule update --init --recursive -- lib/ios_arm64 || echo "submodule path lib/ios_arm64 not found"
-          echo "--- Contents of lib/ now ---"
-          ls -la lib/ 2>/dev/null || echo "no lib dir exists"
-      - name: Configure Blender for iOS simulator
+          git -c submodule.lib/ios_arm64.update=checkout submodule update --init --recursive -- lib/ios_arm64
+          echo "--- Contents of lib/ios_arm64 ---"
+          ls -la lib/ios_arm64/
+      - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
           rm -rf "$CM_BUILD_DIR/$BUILD_DIR"
@@ -44,7 +38,7 @@ workflows:
             -S "$CM_BUILD_DIR" \
             -B "$CM_BUILD_DIR/$BUILD_DIR" \
             -G Xcode \
-            -DAPPLE_TARGET_DEVICE=ios-simulator
+            -DAPPLE_TARGET_DEVICE=ios
       - name: Build Blender
         script: |
           set -euxo pipefail
@@ -52,7 +46,7 @@ workflows:
             --config Release \
             --parallel 8
     artifacts:
-      - build-ios-sim/**/*
+      - build-ios-device/**/*
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
       - /tmp/xcodebuild_logs/*.log
