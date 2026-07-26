@@ -60,8 +60,17 @@ workflows:
             --config Release \
             --parallel 8 \
             -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Package IPA
+        script: |
+          set -euxo pipefail
+          cd "$CM_BUILD_DIR/$BUILD_DIR/bin/Release"
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R Blender.app Payload/
+          zip -r -y Blender.ipa Payload
+          ls -la Blender.ipa
     artifacts:
-      - build-ios-device/**/*
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - build-ios-device/bin/Release/Blender.ipa
+      - build-ios-device/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
       - /tmp/xcodebuild_logs/*.log
