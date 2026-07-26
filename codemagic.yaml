@@ -23,6 +23,13 @@ workflows:
           cd "$CM_BUILD_DIR"
           git lfs install
           git lfs pull --exclude="tests/**"
+      - name: Pin to commit matching iOS libs
+        script: |
+          set -euxo pipefail
+          cd "$CM_BUILD_DIR"
+          LIBS_COMMIT=$(git log -1 --format=%H -- lib/ios_arm64)
+          echo "Commit that last updated lib/ios_arm64 pointer: $LIBS_COMMIT"
+          git checkout "$LIBS_COMMIT"
       - name: Force-fetch iOS + macOS precompiled libs
         script: |
           set -euxo pipefail
@@ -38,8 +45,7 @@ workflows:
             -S "$CM_BUILD_DIR" \
             -B "$CM_BUILD_DIR/$BUILD_DIR" \
             -G Xcode \
-            -DAPPLE_TARGET_DEVICE=ios \
-            -DPYTHON_VERSION=3.11
+            -DAPPLE_TARGET_DEVICE=ios
       - name: Build Blender
         script: |
           set -euxo pipefail
