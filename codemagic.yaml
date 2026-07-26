@@ -51,7 +51,8 @@ workflows:
           set -euxo pipefail
           cmake --build "$CM_BUILD_DIR/$BUILD_DIR" \
             --config Release \
-            --parallel 8
+            --parallel 8 \
+            -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
     artifacts:
       - build-ios-device/**/*
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
