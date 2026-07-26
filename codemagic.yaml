@@ -37,6 +37,12 @@ workflows:
           git -c submodule.lib/ios_arm64.update=checkout \
               -c submodule.lib/macos_arm64.update=checkout \
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
+          echo "--- Pulling LFS content inside lib/ios_arm64 submodule ---"
+          (cd lib/ios_arm64 && git lfs install && git lfs pull)
+          echo "--- Pulling LFS content inside lib/macos_arm64 submodule ---"
+          (cd lib/macos_arm64 && git lfs install && git lfs pull)
+          echo "--- Verify libzstd.a is now a real binary, not a stub ---"
+          file lib/ios_arm64/zstd/lib/libzstd.a
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
