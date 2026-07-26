@@ -37,12 +37,8 @@ workflows:
           git -c submodule.lib/ios_arm64.update=checkout \
               -c submodule.lib/macos_arm64.update=checkout \
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
-          echo "--- Pulling LFS content inside lib/ios_arm64 submodule ---"
           (cd lib/ios_arm64 && git lfs install && git lfs pull)
-          echo "--- Pulling LFS content inside lib/macos_arm64 submodule ---"
           (cd lib/macos_arm64 && git lfs install && git lfs pull)
-          echo "--- Verify libzstd.a is now a real binary, not a stub ---"
-          file lib/ios_arm64/zstd/lib/libzstd.a
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
@@ -64,6 +60,18 @@ workflows:
         script: |
           set -euxo pipefail
           cd "$CM_BUILD_DIR/$BUILD_DIR/bin/Release"
+          LIBDIR="$CM_BUILD_DIR/lib/ios_arm64"
+          mkdir -p Blender.app/Assets/lib
+          cp -v "$LIBDIR"/tbb/lib/libtbb.dylib \
+                "$LIBDIR"/tbb/lib/libtbbmalloc_proxy.dylib \
+                "$LIBDIR"/tbb/lib/libtbbmalloc.dylib \
+                "$LIBDIR"/openmp/lib/libomp.dylib \
+                Blender.app/Assets/lib/
+          cp -v "$LIBDIR"/imath/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no imath dylibs found"
+          cp -v "$LIBDIR"/llvm/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no llvm dylibs found"
+          cp -v "$LIBDIR"/openimageio/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no openimageio dylibs found"
+          echo "--- Final Assets/lib contents ---"
+          ls -la Blender.app/Assets/lib/
           rm -rf Payload
           mkdir -p Payload
           cp -R Blender.app Payload/
@@ -71,6 +79,6 @@ workflows:
           ls -la Blender.ipa
     artifacts:
       - build-ios-device/bin/Release/Blender.ipa
-      - build-ios-device/**/*.app
+      - build-ios-device/bin/Release/Blender.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
       - /tmp/xcodebuild_logs/*.log
