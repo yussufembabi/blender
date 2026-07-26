@@ -37,14 +37,10 @@ workflows:
           git -c submodule.lib/ios_arm64.update=checkout \
               -c submodule.lib/macos_arm64.update=checkout \
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
-      - name: Locate cross-tools cmake source
-        script: |
-          set -euxo pipefail
-          cd "$CM_BUILD_DIR"
-          grep -rn "blender_cross_tools_compile" --include="*.cmake" --include="CMakeLists.txt" . || echo "no matches"
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:$PATH"
           rm -rf "$CM_BUILD_DIR/$BUILD_DIR"
           cmake \
             -S "$CM_BUILD_DIR" \
