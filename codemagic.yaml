@@ -1,90 +1,76 @@
 workflows:
   blender_ios_device:
-    name: Blender iOS device first build
-    max_build_duration: 120
+    name: Blender iOS device build (official recipe)
+    max_build_duration: 180
     instance_type: mac_mini_m2
     environment:
       xcode: latest
       vars:
-        BUILD_DIR: build-ios-device
-        GIT_LFS_SKIP_SMUDGE: "1"
+        BUILD_DIR: build_ios
     scripts:
-      - name: Show environment
+      - name: Install dependencies
         script: |
           set -euxo pipefail
-          pwd
-          git branch --show-current
-          git rev-parse --short HEAD
-          xcodebuild -version
-          cmake --version
-      - name: Fetch real LFS files (skip broken test assets)
+          brew install git-lfs cmake || true
+
+      - name: Clone Blender ios branch with LFS
         script: |
           set -euxo pipefail
-          cd "$CM_BUILD_DIR"
           git lfs install
-          git lfs pull --exclude="tests/**"
-      - name: Pin to commit matching iOS libs
+          rm -rf blender
+          git clone --depth 1 --branch ios https://projects.blender.org/blender/blender.git blender
+          cd blender
+          git lfs fetch origin
+          git lfs pull
+
+      - name: Fetch prebuilt iOS libraries (official method)
         script: |
           set -euxo pipefail
-          cd "$CM_BUILD_DIR"
-          LIBS_COMMIT=$(git log -1 --format=%H -- lib/ios_arm64)
-          echo "Commit that last updated lib/ios_arm64 pointer: $LIBS_COMMIT"
-          git checkout "$LIBS_COMMIT"
-      - name: Force-fetch iOS + macOS precompiled libs
-        script: |
-          set -euxo pipefail
-          cd "$CM_BUILD_DIR"
-          git -c submodule.lib/ios_arm64.update=checkout \
-              -c submodule.lib/macos_arm64.update=checkout \
-              submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
-          (cd lib/ios_arm64 && git lfs install && git lfs pull)
-          (cd lib/macos_arm64 && git lfs install && git lfs pull)
-      - name: Configure Blender for iOS device
+          cd blender
+          export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:$PATH"
+          python3 build_files/utils/make_update.py --use-ios-libraries
+
+      - name: Generate Xcode project
         script: |
           set -euxo pipefail
           export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:$PATH"
-          rm -rf "$CM_BUILD_DIR/$BUILD_DIR"
-          cmake \
-            -S "$CM_BUILD_DIR" \
-            -B "$CM_BUILD_DIR/$BUILD_DIR" \
-            -G Xcode \
-            -DAPPLE_TARGET_DEVICE=ios
-      - name: Build Blender
+          cmake -G Xcode -S blender -B $BUILD_DIR
+
+      - name: Build cross-compilation tools
         script: |
           set -euxo pipefail
-          cmake --build "$CM_BUILD_DIR/$BUILD_DIR" \
-            --config Release \
-            --parallel 8 \
-            -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
-      - name: Package IPA
+          xcodebuild \
+            -project $BUILD_DIR/Blender.xcodeproj \
+            -target blender_cross_tools_compile \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build Blender.app for iOS (install target)
         script: |
           set -euxo pipefail
-          cd "$CM_BUILD_DIR/$BUILD_DIR/bin/Release"
-          LIBDIR="$CM_BUILD_DIR/lib/ios_arm64"
-          mkdir -p Blender.app/Assets/lib
-          for f in \
-            "$LIBDIR"/tbb/lib/libtbb.dylib \
-            "$LIBDIR"/tbb/lib/libtbbmalloc_proxy.dylib \
-            "$LIBDIR"/tbb/lib/libtbbmalloc.dylib \
-            "$LIBDIR"/openmp/lib/libomp.dylib \
-            "$LIBDIR"/imath/lib/*.dylib \
-            "$LIBDIR"/llvm/lib/*.dylib \
-            "$LIBDIR"/openimageio/lib/*.dylib ; do
-            if [ -f "$f" ]; then
-              cp -v "$f" Blender.app/Assets/lib/
-            else
-              echo "SKIP (not found): $f"
-            fi
-          done
-          echo "--- Final Assets/lib contents ---"
-          ls -la Blender.app/Assets/lib/
-          rm -rf Payload
-          mkdir -p Payload
-          cp -R Blender.app Payload/
-          zip -r -y Blender.ipa Payload
-          ls -la Blender.ipa
+          xcodebuild \
+            -project $BUILD_DIR/Blender.xcodeproj \
+            -target install \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ARCHS=arm64
+
+      - name: Package unsigned IPA
+        script: |
+          set -euxo pipefail
+          APP="$BUILD_DIR/bin/Release/Blender.app"
+          ls -la "$APP" || (echo "App not found, searching..." && find "$BUILD_DIR" -name "*.app" -type d)
+          du -sh "$APP"
+          mkdir -p IPA/Payload
+          cp -r "$APP" IPA/Payload/
+          cd IPA && zip -r ../Blender.ipa Payload/
+          ls -lh ../Blender.ipa
+
     artifacts:
-      - build-ios-device/bin/Release/Blender.ipa
-      - build-ios-device/bin/Release/Blender.app
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-      - /tmp/xcodebuild_logs/*.log
+      - Blender.ipa
+      - $BUILD_DIR/**/*.log
