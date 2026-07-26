@@ -49,6 +49,9 @@ workflows:
       - name: Build Blender
         script: |
           set -euxo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/local/sbin:$PATH"
+          which cmake
+          which sysctl
           cmake --build "$CM_BUILD_DIR/$BUILD_DIR" \
             --config Release \
             --parallel 8 \
