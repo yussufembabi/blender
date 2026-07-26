@@ -23,13 +23,17 @@ workflows:
           cd "$CM_BUILD_DIR"
           git lfs install
           git lfs pull --exclude="tests/**"
-      - name: Force-fetch iOS device precompiled libs
+      - name: Force-fetch iOS + macOS precompiled libs
         script: |
           set -euxo pipefail
           cd "$CM_BUILD_DIR"
-          git -c submodule.lib/ios_arm64.update=checkout submodule update --init --recursive -- lib/ios_arm64
+          git -c submodule.lib/ios_arm64.update=checkout \
+              -c submodule.lib/macos_arm64.update=checkout \
+              submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
           echo "--- Contents of lib/ios_arm64 ---"
           ls -la lib/ios_arm64/
+          echo "--- Contents of lib/macos_arm64 ---"
+          ls -la lib/macos_arm64/
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
