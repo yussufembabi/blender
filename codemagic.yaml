@@ -1,7 +1,7 @@
 workflows:
   blender_ios_device:
     name: Blender iOS device build (official recipe)
-    max_build_duration: 180
+    max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
       xcode: latest
