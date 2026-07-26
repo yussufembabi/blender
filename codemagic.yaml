@@ -1,0 +1,44 @@
+workflows:
+  blender_ios_simulator:
+    name: Blender iOS simulator first build
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    environment:
+      xcode: latest
+      vars:
+        BUILD_DIR: build-ios-sim
+
+    scripts:
+      - name: Show environment
+        script: |
+          set -euxo pipefail
+          pwd
+          git branch --show-current
+          git rev-parse --short HEAD
+          xcodebuild -version
+          cmake --version
+          git lfs version || true
+
+      - name: Pull LFS assets
+        script: |
+          set -euxo pipefail
+          git lfs install
+          git lfs pull
+
+      - name: Configure Blender for iOS simulator
+        script: |
+          set -euxo pipefail
+          rm -rf "$CM_BUILD_DIR/$BUILD_DIR"
+          cmake -S "$CM_BUILD_DIR" -B "$CM_BUILD_DIR/$BUILD_DIR" -G Xcode -DAPPLE_TARGET_DEVICE=ios-simulator
+
+      - name: Build Blender
+        script: |
+          set -euxo pipefail
+          cmake --build "$CM_BUILD_DIR/$BUILD_DIR" --config Release --parallel 8
+
+    artifacts:
+      - build-ios-sim/**/*
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - /tmp/xcodebuild_logs/*.log
