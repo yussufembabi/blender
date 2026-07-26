@@ -32,8 +32,9 @@ workflows:
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
           echo "--- Contents of lib/ios_arm64 ---"
           ls -la lib/ios_arm64/
-          echo "--- Contents of lib/macos_arm64 ---"
-          ls -la lib/macos_arm64/
+          echo "--- Does lib/ios_arm64/python exist? ---"
+          ls -la lib/ios_arm64/python/ 2>/dev/null || echo "NO python folder in ios_arm64 libs"
+          find lib/ios_arm64 -iname "*python*" -maxdepth 3 2>/dev/null || true
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
