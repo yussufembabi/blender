@@ -30,11 +30,6 @@ workflows:
           git -c submodule.lib/ios_arm64.update=checkout \
               -c submodule.lib/macos_arm64.update=checkout \
               submodule update --init --recursive -- lib/ios_arm64 lib/macos_arm64
-          echo "--- Contents of lib/ios_arm64 ---"
-          ls -la lib/ios_arm64/
-          echo "--- Does lib/ios_arm64/python exist? ---"
-          ls -la lib/ios_arm64/python/ 2>/dev/null || echo "NO python folder in ios_arm64 libs"
-          find lib/ios_arm64 -iname "*python*" -maxdepth 3 2>/dev/null || true
       - name: Configure Blender for iOS device
         script: |
           set -euxo pipefail
@@ -43,7 +38,8 @@ workflows:
             -S "$CM_BUILD_DIR" \
             -B "$CM_BUILD_DIR/$BUILD_DIR" \
             -G Xcode \
-            -DAPPLE_TARGET_DEVICE=ios
+            -DAPPLE_TARGET_DEVICE=ios \
+            -DPYTHON_VERSION=3.11
       - name: Build Blender
         script: |
           set -euxo pipefail
