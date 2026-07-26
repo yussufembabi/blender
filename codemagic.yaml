@@ -62,14 +62,20 @@ workflows:
           cd "$CM_BUILD_DIR/$BUILD_DIR/bin/Release"
           LIBDIR="$CM_BUILD_DIR/lib/ios_arm64"
           mkdir -p Blender.app/Assets/lib
-          cp -v "$LIBDIR"/tbb/lib/libtbb.dylib \
-                "$LIBDIR"/tbb/lib/libtbbmalloc_proxy.dylib \
-                "$LIBDIR"/tbb/lib/libtbbmalloc.dylib \
-                "$LIBDIR"/openmp/lib/libomp.dylib \
-                Blender.app/Assets/lib/
-          cp -v "$LIBDIR"/imath/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no imath dylibs found"
-          cp -v "$LIBDIR"/llvm/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no llvm dylibs found"
-          cp -v "$LIBDIR"/openimageio/lib/*.dylib Blender.app/Assets/lib/ 2>/dev/null || echo "no openimageio dylibs found"
+          for f in \
+            "$LIBDIR"/tbb/lib/libtbb.dylib \
+            "$LIBDIR"/tbb/lib/libtbbmalloc_proxy.dylib \
+            "$LIBDIR"/tbb/lib/libtbbmalloc.dylib \
+            "$LIBDIR"/openmp/lib/libomp.dylib \
+            "$LIBDIR"/imath/lib/*.dylib \
+            "$LIBDIR"/llvm/lib/*.dylib \
+            "$LIBDIR"/openimageio/lib/*.dylib ; do
+            if [ -f "$f" ]; then
+              cp -v "$f" Blender.app/Assets/lib/
+            else
+              echo "SKIP (not found): $f"
+            fi
+          done
           echo "--- Final Assets/lib contents ---"
           ls -la Blender.app/Assets/lib/
           rm -rf Payload
