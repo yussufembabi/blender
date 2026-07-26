@@ -7,6 +7,7 @@ workflows:
       xcode: latest
       vars:
         BUILD_DIR: build-ios-sim
+        GIT_LFS_SKIP_SMUDGE: "1"
     scripts:
       - name: Show environment
         script: |
@@ -17,12 +18,12 @@ workflows:
           xcodebuild -version
           cmake --version
           git lfs version || true
-      - name: Fetch real LFS files
+      - name: Fetch real LFS files (skip broken test assets)
         script: |
           set -euxo pipefail
           cd "$CM_BUILD_DIR"
           git lfs install
-          git lfs pull
+          git lfs pull --exclude="tests/**"
       - name: Configure Blender for iOS simulator
         script: |
           set -euxo pipefail
